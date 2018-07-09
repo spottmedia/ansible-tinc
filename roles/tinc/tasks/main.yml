@@ -1,30 +1,29 @@
 ---
 
-- name: install epel-release (redhat)
-  yum: >
-    name=epel-release
-    state=latest
-  when: (ansible_os_family == "RedHat" and ansible_distribution_major_version == "7")
-
 - name: install tinc
   package: >
     name=tinc
     state=latest
 
-- name: create tinc systemd service file (redhat)
+- name: install rsync
+  package: >
+    name=rsync
+    state=latest
+
+- name: create tinc systemd service file (debian 9 & ubuntu 18)
   template: >
     src=tinc.service.j2
     dest=/etc/systemd/system/tinc.service
   register: tinc_service_file
-  when: (ansible_os_family == "RedHat" and ansible_distribution_major_version == "7")
+  when: (ansible_distribution == "Debian" and ansible_distribution_major_version == "9") or (ansible_distribution == "Ubuntu" and ansible_distribution_major_version == "18")
 
-- name: systemctl daemon-reload (redhat)
+- name: systemctl daemon-reload
   shell: systemctl daemon-reload
   when: tinc_service_file.changed
 
 - name: ensure tinc netname directory exists
   file: >
-    path=/etc/tinc/{{ netname }}/hosts
+    path=/etc/tinc/{{ vpn_interface }}/hosts
     recurse=True
     state=directory
 
@@ -38,14 +37,14 @@
 - name: ensure tinc.conf contains connection to all other nodes
   template: >
     src=tinc.conf.j2
-    dest=/etc/tinc/{{ netname }}/tinc.conf
+    dest=/etc/tinc/{{ vpn_interface }}/tinc.conf
   notify:
-    - reload tinc
+    - restart tinc
 
 - name: create tinc-up file
   template: >
     src=tinc-up.j2
-    dest=/etc/tinc/{{ netname }}/tinc-up
+    dest=/etc/tinc/{{ vpn_interface }}/tinc-up
     mode=0755
   notify:
     - restart tinc
@@ -53,14 +52,14 @@
 - name: create tinc-down file
   template: >
     src=tinc-down.j2
-    dest=/etc/tinc/{{ netname }}/tinc-down
+    dest=/etc/tinc/{{ vpn_interface }}/tinc-down
     mode=0755
   notify:
     - restart tinc
 
 - name: ensure tinc hosts file binds to physical ip address
   lineinfile: >
-    dest=/etc/tinc/{{ netname }}/hosts/{{ inventory_hostname }}
+    dest=/etc/tinc/{{ vpn_interface }}/hosts/{{ inventory_hostname }}
     line="Address = {{ physical_ip }}"
     create=yes
   notify:
@@ -68,45 +67,45 @@
 
 - name: ensure subnet ip address is properly set in tinc host file
   lineinfile: >
-    dest=/etc/tinc/{{ netname }}/hosts/{{ inventory_hostname }}
+    dest=/etc/tinc/{{ vpn_interface }}/hosts/{{ inventory_hostname }}
     line="Subnet = {{ vpn_ip }}/{{ vpn_subnet_cidr_netmask }}"
     create=yes
   notify:
     - restart tinc
 
 - name: check whether /etc/tinc/netname/hosts/inventory_hostname contains "-----END RSA PUBLIC KEY-----"
-  command: awk '/^-----END RSA PUBLIC KEY-----$/'  /etc/tinc/{{ netname }}/hosts/{{ inventory_hostname }}
+  command: awk '/^-----END RSA PUBLIC KEY-----$/'  /etc/tinc/{{ vpn_interface }}/hosts/{{ inventory_hostname }}
   changed_when: "public_key.stdout != '-----END RSA PUBLIC KEY-----'"
   register: public_key
 
 # this is necessary because the public key will not be generated (non-interactively) if the private key already exists
 - name: delete private key and regenerate keypair if public key is absent from tinc hosts file
   file: >
-    path=/etc/tinc/{{ netname }}/rsa_key.priv
+    path=/etc/tinc/{{ vpn_interface }}/rsa_key.priv
     state=absent
   when: public_key.changed
 
 - name: create tinc private key (and append public key to tincd hosts file)
-  shell: tincd -n {{ netname }} -K4096
+  shell: tincd -n {{ vpn_interface }} -K4096
   args:
-    creates: /etc/tinc/{{ netname }}/rsa_key.priv
+    creates: /etc/tinc/{{ vpn_interface }}/rsa_key.priv
   notify:
     - restart tinc
 
 - name: fetch tinc hosts file after key creation
   fetch: >
-    src=/etc/tinc/{{ netname }}/hosts/{{ inventory_hostname }}
-    dest=fetch/{{ inventory_hostname }}
+    src=/etc/tinc/{{ vpn_interface }}/hosts/{{ inventory_hostname }}
+    dest=output/tinc_keys/{{ inventory_hostname }}
     flat=yes
   notify:
-    - reload tinc
+    - restart tinc
 
 - name: sync the fetched tinc hosts files on each host
   synchronize: >
-    src=fetch/
-    dest=/etc/tinc/{{ netname }}/hosts/
+    src=output/tinc_keys/
+    dest=/etc/tinc/{{ vpn_interface }}/hosts/
   notify:
-    - reload tinc
+    - restart tinc
 
 - name: run handlers
   meta: flush_handlers
@@ -116,7 +115,7 @@
     name=tinc
     enabled=yes
     state=started
-    pattern=tincd -n {{ netname }}
+    pattern=tincd -n {{ vpn_interface }}
 
 - name: add nodes to /etc/hosts (ansible_inventory resolves to vpn_ip)
   lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].vpn_ip }} {{item}}" state=present

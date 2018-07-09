@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 Type=forking
-ExecStart=/usr/sbin/tincd -n {{ netname }}
-ExecReload=/usr/bin/kill -HUP $MAINPID
+ExecStart=/usr/sbin/tincd -n {{ vpn_interface }}
+
 
 [Install]
 WantedBy=multi-user.target
