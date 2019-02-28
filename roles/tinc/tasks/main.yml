@@ -1,14 +1,16 @@
 ---
 
 - name: install tinc
-  package: >
-    name=tinc
-    state=latest
+  apt:
+    name: tinc
+    state: present
+    update_cache: true
 
 - name: install rsync
-  package: >
-    name=rsync
-    state=latest
+  apt:
+    name: rsync
+    state: present
+    update_cache: true
 
 - name: create tinc systemd service file (debian 9 & ubuntu 18)
   template: >
