@@ -102,9 +102,10 @@
     - reload tinc
 
 - name: sync the fetched tinc hosts files on each host
-  synchronize: >
-    src=fetch/
-    dest=/etc/tinc/{{ netname }}/hosts/
+  copy:
+    src: fetch/
+    dest: /etc/tinc/{{ netname }}/hosts/
+    remote_src: true
   notify:
     - reload tinc
 
