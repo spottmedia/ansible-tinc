@@ -1,0 +1,45 @@
+---
+- name: Converge
+  hosts: vpn
+
+  roles:
+    - role: tinc
+      netname: tincnet
+#      vpn_ip: 10.0.0.1
+      physical_ip: "{{ ansible_eth0.ipv4.address }}"
+      vpn_interface: tun0
+      vpn_netmask: 255.255.255.0
+      vpn_subnet_cidr_netmask: 32
+#      tinc_hostname: vpn1
+#      tinc_connect_to:
+#        - vpn2
+#
+#- name: Converge
+#  hosts: test-ansible-tinc-instance-2
+#
+#  roles:
+#    - role: tinc
+#      netname: tincnet
+#      vpn_ip: 10.0.0.2
+#      physical_ip: "{{ ansible_eth0.ipv4.address }}"
+#      vpn_interface: tun0
+#      vpn_netmask: 255.255.255.0
+#      vpn_subnet_cidr_netmask: 32
+#      tinc_hostname: vpn2
+#      tinc_connect_to:
+#        - vpn1
+#
+#- name: Converge
+#  hosts: test-ansible-tinc-instance-3
+#
+#  roles:
+#    - role: tinc
+#      netname: tincnet
+#      vpn_ip: 10.0.0.3
+#      physical_ip: "{{ ansible_eth0.ipv4.address }}"
+#      vpn_interface: tun0
+#      vpn_netmask: 255.255.255.0
+#      vpn_subnet_cidr_netmask: 32
+#      tinc_hostname: vpn3
+#      tinc_connect_to:
+#        - vpn1

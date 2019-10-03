@@ -1,24 +1,25 @@
 ---
 
-- name: install epel-release (redhat)
-  yum: >
-    name=epel-release
-    state=latest
-  when: (ansible_os_family == "RedHat" and ansible_distribution_major_version == "7")
-
 - name: install tinc
-  package: >
-    name=tinc
-    state=latest
+  apt:
+    name: tinc
+    state: present
+    update_cache: true
 
-- name: create tinc systemd service file (redhat)
+- name: install rsync
+  apt:
+    name: rsync
+    state: present
+    update_cache: true
+
+- name: create tinc systemd service file (debian 9 & ubuntu 18)
   template: >
     src=tinc.service.j2
     dest=/etc/systemd/system/tinc.service
   register: tinc_service_file
-  when: (ansible_os_family == "RedHat" and ansible_distribution_major_version == "7")
+  when: (ansible_distribution == "Debian" and ansible_distribution_major_version == "9") or (ansible_distribution == "Ubuntu" and ansible_distribution_major_version == "18")
 
-- name: systemctl daemon-reload (redhat)
+- name: systemctl daemon-reload
   shell: systemctl daemon-reload
   when: tinc_service_file.changed
 
@@ -40,7 +41,7 @@
     src=tinc.conf.j2
     dest=/etc/tinc/{{ netname }}/tinc.conf
   notify:
-    - reload tinc
+    - restart tinc
 
 - name: create tinc-up file
   template: >
@@ -60,7 +61,7 @@
 
 - name: ensure tinc hosts file binds to physical ip address
   lineinfile: >
-    dest=/etc/tinc/{{ netname }}/hosts/{{ inventory_hostname }}
+    dest=/etc/tinc/{{ netname }}/hosts/{{ tinc_hostname }}
     line="Address = {{ physical_ip }}"
     create=yes
   notify:
@@ -68,14 +69,14 @@
 
 - name: ensure subnet ip address is properly set in tinc host file
   lineinfile: >
-    dest=/etc/tinc/{{ netname }}/hosts/{{ inventory_hostname }}
+    dest=/etc/tinc/{{ netname }}/hosts/{{ tinc_hostname }}
     line="Subnet = {{ vpn_ip }}/{{ vpn_subnet_cidr_netmask }}"
     create=yes
   notify:
     - restart tinc
 
-- name: check whether /etc/tinc/netname/hosts/inventory_hostname contains "-----END RSA PUBLIC KEY-----"
-  command: awk '/^-----END RSA PUBLIC KEY-----$/'  /etc/tinc/{{ netname }}/hosts/{{ inventory_hostname }}
+- name: check whether /etc/tinc/netname/hosts/tinc_hostname contains "-----END RSA PUBLIC KEY-----"
+  command: awk '/^-----END RSA PUBLIC KEY-----$/'  /etc/tinc/{{ netname }}/hosts/{{ tinc_hostname }}
   changed_when: "public_key.stdout != '-----END RSA PUBLIC KEY-----'"
   register: public_key
 
@@ -95,19 +96,18 @@
 
 - name: fetch tinc hosts file after key creation
   fetch: >
-    src=/etc/tinc/{{ netname }}/hosts/{{ inventory_hostname }}
-    dest=fetch/{{ inventory_hostname }}
+    src=/etc/tinc/{{ netname }}/hosts/{{ tinc_hostname }}
+    dest=output/tinc_keys/{{ tinc_hostname }}
     flat=yes
   notify:
-    - reload tinc
+    - restart tinc
 
 - name: sync the fetched tinc hosts files on each host
   copy:
-    src: fetch/
+    src: output/tinc_keys/
     dest: /etc/tinc/{{ netname }}/hosts/
-    remote_src: true
   notify:
-    - reload tinc
+    - restart tinc
 
 - name: run handlers
   meta: flush_handlers

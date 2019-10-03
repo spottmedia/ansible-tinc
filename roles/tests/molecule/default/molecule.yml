@@ -1,0 +1,56 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: lxd
+lint:
+  name: yamllint
+platforms:
+  - name:  test-ansible-tinc-instance-1
+    image: ubuntu/bionic/amd64
+    groups:
+      - vpn
+  - name:  test-ansible-tinc-instance-2
+    image: ubuntu/bionic/amd64
+    groups:
+      - vpn
+  - name:  test-ansible-tinc-instance-3
+    image: ubuntu/bionic/amd64
+    groups:
+      - vpn
+provisioner:
+  name: ansible
+  inventory:
+    host_vars:
+      test-ansible-tinc-instance-1:
+        vpn_ip: 10.0.0.1
+        tinc_hostname: vpn1
+        tinc_connect_to:
+          - vpn2
+          - vpn3
+      test-ansible-tinc-instance-2:
+        vpn_ip: 10.0.0.2
+        tinc_hostname: vpn2
+        tinc_connect_to:
+          - vpn1
+          - vpn2
+      test-ansible-tinc-instance-3:
+        vpn_ip: 10.0.0.3
+        tinc_hostname: vpn3
+        tinc_connect_to:
+          - vpn1
+          - vpn2
+
+  config_options:
+    defaults:
+      internal_poll_interval: 0.001
+    ssh_connection:
+      pipelining: True
+  lint:
+    name: ansible-lint
+scenario:
+  name: "default"
+verifier:
+  name: testinfra
+  lint:
+    name: flake8
