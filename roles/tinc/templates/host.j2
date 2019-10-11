@@ -1,0 +1,4 @@
+Address = {{ physical_ip }}
+Subnet = {{ vpn_ip }}/{{ vpn_subnet_cidr_netmask }}
+
+{{ tinc_prv_key['content'] | b64decode }}
