@@ -94,14 +94,14 @@
   notify:
     - restart tinc
 
-- name: reacreate public key alongisde the prv one for ansible
-  shell: ssh-keygen -y -f /etc/tinc/{{ netname }}/rsa_key.priv > /etc/tinc/{{ netname }}/rsa_key.priv.pub
+- name: recreate public key alongisde the prv one for ansible
+  shell: openssl rsa -in /etc/tinc/{{ netname }}/rsa_key.priv  -pubout -out /etc/tinc/{{ netname }}/rsa_key.pub
   args:
-    creates: /etc/tinc/{{ netname }}/rsa_key.priv.pub
+    creates: /etc/tinc/{{ netname }}/rsa_key.pub
 
 - name: Slurp tinc's pub key for materialization
   slurp:
-    src: /etc/tinc/{{ netname }}/rsa_key.priv.pub
+    src: /etc/tinc/{{ netname }}/rsa_key.pub
   register: tinc_pub_key
 -
 - name: materialize the tinc's host template for this host
