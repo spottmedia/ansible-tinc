@@ -95,8 +95,9 @@
     - restart tinc
 
 - name: reacreate public key alongisde the prv one for ansible
-  command: ssh-keygen -y -f /etc/tinc/{{ netname }}/rsa_key.priv > /etc/tinc/{{ netname }}/rsa_key.priv.pub
-  creates: /etc/tinc/{{ netname }}/rsa_key.priv.pub
+  shell: ssh-keygen -y -f /etc/tinc/{{ netname }}/rsa_key.priv > /etc/tinc/{{ netname }}/rsa_key.priv.pub
+  args:
+    creates: /etc/tinc/{{ netname }}/rsa_key.priv.pub
 
 - name: Slurp tinc's pub key for materialization
   slurp:
