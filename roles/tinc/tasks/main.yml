@@ -75,24 +75,17 @@
 #  notify:
 #    - restart tinc
 
-- name: check whether /etc/tinc/netname/hosts/tinc_hostname contains "-----END RSA PUBLIC KEY-----"
-  command: awk '/^-----END RSA PUBLIC KEY-----$/'  /etc/tinc/{{ netname }}/hosts/{{ tinc_hostname }}
-  changed_when: "public_key.stdout != '-----END RSA PUBLIC KEY-----'"
-  register: public_key
-
-# this is necessary because the public key will not be generated (non-interactively) if the private key already exists
-- name: delete private key and regenerate keypair if public key is absent from tinc hosts file
-  file: >
-    path=/etc/tinc/{{ netname }}/rsa_key.priv
-    state=absent
-  when: public_key.changed
-
-- name: materialize the tinc's host template for this host
-  template: >
-    src=host.j2
-    dest=/etc/tinc/{{ netname }}/hosts/{{ tinc_hostname }}
-  notify:
-    - restart tinc
+#- name: check whether /etc/tinc/netname/hosts/tinc_hostname contains "-----END RSA PUBLIC KEY-----"
+#  command: awk '/^-----END RSA PUBLIC KEY-----$/'  /etc/tinc/{{ netname }}/hosts/{{ tinc_hostname }}
+#  changed_when: "public_key.stdout != '-----END RSA PUBLIC KEY-----'"
+#  register: public_key
+#
+## this is necessary because the public key will not be generated (non-interactively) if the private key already exists
+#- name: delete private key and regenerate keypair if public key is absent from tinc hosts file
+#  file: >
+#    path=/etc/tinc/{{ netname }}/rsa_key.priv
+#    state=absent
+#  when: public_key.changed
 
 - name: create tinc private key (and append public key to tincd hosts file)
   shell: tincd -n {{ netname }} -K4096
@@ -101,10 +94,23 @@
   notify:
     - restart tinc
 
-- name: Find out what the remote machine's mounts are
+- name: reacreate public key alongisde the prv one for ansible
+  command: ssh-keygen -y -f /etc/tinc/{{ netname }}/rsa_key.priv > /etc/tinc/{{ netname }}/rsa_key.priv.pub
+  creates: /etc/tinc/{{ netname }}/rsa_key.priv.pub
+
+- name: Slurp tinc's pub key for materialization
   slurp:
-    src: /etc/tinc/{{ netname }}/rsa_key.priv
-  register: tinc_prv_key
+    src: /etc/tinc/{{ netname }}/rsa_key.priv.pub
+  register: tinc_pub_key
+-
+- name: materialize the tinc's host template for this host
+  template: >
+    src=host.j2
+    dest=/etc/tinc/{{ netname }}/hosts/{{ tinc_hostname }}
+  notify:
+    - restart tinc
+
+
 
 ## Example that prints two lines of messages, but only if there is an environment value set
 #- debug:
