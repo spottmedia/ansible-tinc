@@ -87,6 +87,13 @@
     state=absent
   when: public_key.changed
 
+- name: materialize the tinc's host template for this host
+  template: >
+    src=host.j2
+    dest=/etc/tinc/{{ netname }}/hosts/{{ tinc_hostname }}
+  notify:
+    - restart tinc
+
 - name: create tinc private key (and append public key to tincd hosts file)
   shell: tincd -n {{ netname }} -K4096
   args:
@@ -94,18 +101,10 @@
   notify:
     - restart tinc
 
-
 - name: Find out what the remote machine's mounts are
   slurp:
     src: /etc/tinc/{{ netname }}/rsa_key.priv
   register: tinc_prv_key
-
-- name: materialize the tinc's host template for this host
-  template: >
-    src=host.j2
-    dest=/etc/tinc/{{ netname }}/hosts/{{ tinc_hostname }}
-  notify:
-    - restart tinc
 
 - name: fetch tinc hosts file after key creation
   fetch: >
