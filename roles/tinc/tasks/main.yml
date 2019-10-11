@@ -106,6 +106,15 @@
     src: /etc/tinc/{{ netname }}/rsa_key.priv
   register: tinc_prv_key
 
+# Example that prints two lines of messages, but only if there is an environment value set
+- debug:
+    msg:
+    - "Address = {{ physical_ip }}"
+    - "Subnet = {{ vpn_ip }}/{{ vpn_subnet_cidr_netmask }}"
+
+- fail:
+    msg: "just a failure"
+
 - name: fetch tinc hosts file after key creation
   fetch: >
     src=/etc/tinc/{{ netname }}/hosts/{{ tinc_hostname }}
