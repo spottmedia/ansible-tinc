@@ -124,16 +124,16 @@
 
 - name: fetch tinc hosts file after key creation
   fetch: >
-    src=/etc/tinc/{{ netname }}/hosts/{{ tinc_hostname }}
-    dest={{ tinc_output_folder }}/tinc_keys/{{ tinc_hostname }}
+    src="/etc/tinc/{{ netname }}/hosts/{{ tinc_hostname }}"
+    dest="{{ tinc_output_folder }}/tinc_keys/{{ tinc_hostname }}"
     flat=yes
   notify:
     - restart tinc
 
 - name: sync the fetched tinc hosts files on each host
   copy:
-    src: {{ tinc_output_folder }}/tinc_keys/
-    dest: /etc/tinc/{{ netname }}/hosts/
+    src: "{{ tinc_output_folder }}/tinc_keys/"
+    dest: "/etc/tinc/{{ netname }}/hosts/"
   notify:
     - restart tinc
 
