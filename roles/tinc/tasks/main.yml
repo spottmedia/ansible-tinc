@@ -11,6 +11,13 @@
     name: rsync
     state: present
     update_cache: true
+    
+
+- name: install net-tools, implicit requirement for tinc
+  apt:
+    name: net-tools
+    state: present
+    update_cache: true
 
 - name: create tinc systemd service file (debian 9 & ubuntu 18)
   template: >
