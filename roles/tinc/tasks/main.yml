@@ -148,11 +148,11 @@
   meta: flush_handlers
 
 - name: ensure tinc is started
-  service: >
-    name=tinc
-    enabled=yes
-    state=started
-    pattern=tincd -n {{ netname }}
+  service:
+    name: tinc
+    enabled: true
+    state: started
+    pattern: "tincd --net={{ netname }}"
 
 - name: add nodes to /etc/hosts (ansible_inventory resolves to vpn_ip)
   lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].vpn_ip }} {{item}}" state=present
